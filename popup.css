@@ -1,0 +1,374 @@
+:root {
+  --bg: #ffffff;
+  --bg-sunken: #f4f4f5;
+  --fg: #18181b;
+  --fg-muted: #71717a;
+  --border: #e4e4e7;
+  --accent: #4f46e5;
+  --accent-fg: #ffffff;
+  --live: #16a34a;
+  --danger: #dc2626;
+  --hover: #f4f4f5;
+  --radius: 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #18181b;
+    --bg-sunken: #27272a;
+    --fg: #fafafa;
+    --fg-muted: #a1a1aa;
+    --border: #3f3f46;
+    --accent: #6366f1;
+    --accent-fg: #ffffff;
+    --live: #22c55e;
+    --danger: #f87171;
+    --hover: #27272a;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* An author `display` rule outranks the UA's `[hidden] { display: none }`,
+   which is how .form stayed on screen while hidden. Keep this above the
+   component rules so toggling the attribute always works. */
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  width: 320px;
+  max-height: 560px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--fg);
+  font: 13px/1.4 system-ui, -apple-system, sans-serif;
+}
+
+/* The list and the form scroll; the header and footer stay put. */
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.bar h1 {
+  margin: 0;
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.footer {
+  border-bottom: none;
+  border-top: 1px solid var(--border);
+}
+
+.note {
+  margin: 0;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-sunken);
+  color: var(--fg-muted);
+}
+
+/* ---------------------------------------------------------------- list */
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: var(--radius);
+}
+
+.row.dragging {
+  opacity: 0.4;
+}
+
+.row.drop-target {
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+
+.launch {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 7px 8px;
+  border: none;
+  border-radius: var(--radius);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.launch:hover {
+  background: var(--hover);
+}
+
+.launch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.launch img {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border-radius: 3px;
+}
+
+.launch .name {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--live);
+}
+
+.handle {
+  padding: 0 2px 0 6px;
+  color: var(--fg-muted);
+  cursor: grab;
+  user-select: none;
+}
+
+/* ---------------------------------------------------------------- buttons */
+
+button {
+  border-radius: 6px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.primary {
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-weight: 500;
+}
+
+.grow {
+  flex: 1;
+  padding: 8px;
+  text-align: center;
+}
+
+.ghost {
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--fg-muted);
+}
+
+.ghost[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.icon {
+  padding: 5px 7px;
+  border: none;
+  background: none;
+  color: var(--fg-muted);
+  line-height: 1;
+}
+
+.icon:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+
+.icon.remove:hover {
+  color: var(--danger);
+}
+
+/* The glyph is lighter than the ✕ beside it, so give it a little more size. */
+.icon.reset {
+  font-size: 15px;
+}
+
+.icon.reset:hover {
+  color: var(--accent);
+}
+
+/* ---------------------------------------------------------------- form */
+
+.empty {
+  margin: 0;
+  padding: 18px 16px;
+  color: var(--fg-muted);
+  text-align: center;
+}
+
+.form {
+  margin: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+}
+
+.form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--fg-muted);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.form label.check {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  text-transform: none;
+  font-size: 12px;
+  letter-spacing: 0;
+}
+
+.form .hint {
+  text-transform: none;
+  letter-spacing: 0;
+  opacity: 0.7;
+}
+
+.form input[type="text"],
+.form input[type="url"] {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  font: 13px/1.4 system-ui, sans-serif;
+}
+
+.form input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.form fieldset {
+  margin: 0;
+  padding: 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.form legend {
+  padding: 0 4px;
+  color: var(--fg-muted);
+  font-size: 11px;
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+}
+
+.actions button {
+  flex: 1;
+}
+
+@keyframes flash {
+  from {
+    background: color-mix(in srgb, var(--accent) 28%, transparent);
+  }
+}
+
+.row.flash .launch {
+  animation: flash 1.1s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row.flash .launch {
+    animation: none;
+    background: var(--hover);
+  }
+}
+
+/* ---------------------------------------------------------------- settings */
+
+/* Edit mode already owns everything that changes the dock, so the one global
+   setting lives there too rather than adding a second way in. */
+.settings {
+  padding: 9px 12px 10px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-sunken);
+}
+
+.settings label.check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.settings .hint {
+  margin: 5px 0 0 21px;
+  color: var(--fg-muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+/* ------------------------------------------------------- embedded in a page */
+
+/* Same document, shown inside the in-page panel's iframe. The iframe is sized
+   to the body, so the body must stay content-height; clipping to the panel's
+   radius keeps the square corners from poking out of it. */
+html.embedded,
+html.embedded body {
+  height: auto;
+}
+
+html.embedded body {
+  border-radius: 10px;
+  overflow: hidden;
+}

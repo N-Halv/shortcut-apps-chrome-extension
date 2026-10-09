@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>App Dock</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <h1>App Dock</h1>
+      <button id="group" class="ghost" type="button" title="Gather open app tabs into this window, in this order">Group</button>
+      <button id="toggle-edit" class="ghost" type="button" aria-pressed="false">Edit</button>
+    </header>
+
+    <div class="content">
+      <ul id="list" class="list" aria-label="Apps"></ul>
+
+      <p id="empty" class="empty" hidden></p>
+
+      <form id="form" class="form" hidden>
+        <label>
+          Name
+          <input id="f-name" type="text" required autocomplete="off" />
+        </label>
+        <label>
+          Launch URL
+          <input id="f-url" type="url" required autocomplete="off" placeholder="https://example.com/" />
+        </label>
+        <fieldset>
+          <legend>Counts as the same app while the tab is on&hellip;</legend>
+          <label>
+            Host
+            <input id="f-host" type="text" autocomplete="off" placeholder="from the launch URL" />
+          </label>
+          <label class="check">
+            <input id="f-subdomains" type="checkbox" />
+            Include subdomains
+          </label>
+          <label>
+            Path starts with <span class="hint">optional</span>
+            <input id="f-prefix" type="text" autocomplete="off" placeholder="/my-team/" />
+          </label>
+          <label class="check">
+            <input id="f-adopt" type="checkbox" checked />
+            Adopt a matching tab that is already open
+          </label>
+        </fieldset>
+        <div class="actions">
+          <button type="submit" class="primary">Save</button>
+          <button type="button" id="cancel" class="ghost">Cancel</button>
+        </div>
+      </form>
+    </div>
+
+    <p id="note" class="note" hidden role="status"></p>
+
+    <div id="settings" class="settings" hidden>
+      <label class="check">
+        <input id="s-inpage" type="checkbox" />
+        Use in page navigation
+      </label>
+      <p class="hint">Puts a small triangle in the top-left corner of every page that opens this dock, so you do not have to reach for the toolbar.</p>
+    </div>
+
+    <footer id="footer" class="bar footer" hidden>
+      <button id="add-new" class="ghost grow" type="button">Add new</button>
+      <button id="add-current" class="primary grow" type="button">Add current tab</button>
+    </footer>
+
+    <script src="popup.js" type="module"></script>
+  </body>
+</html>
