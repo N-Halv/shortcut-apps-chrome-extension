@@ -8,8 +8,14 @@
   <body>
     <header class="bar">
       <h1>App Dock</h1>
-      <button id="group" class="ghost" type="button" title="Gather open app tabs into this window, in this order">Group</button>
-      <button id="toggle-edit" class="ghost" type="button" aria-pressed="false">Edit</button>
+      <button id="group" class="ghost" type="button" aria-label="Group" title="Gather open app tabs into this window, in this order">
+        <svg class="glyph" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect x="1.5" y="3" width="5" height="4.5" rx="1" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="9.5" y="3" width="5" height="4.5" rx="1" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="1.5" y="10" width="13" height="3" rx="1" fill="currentColor"/></svg>
+        <span class="label">Group</span>
+      </button>
+      <button id="toggle-edit" class="ghost" type="button" title="Edit" aria-pressed="false">
+        <svg class="glyph" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 14v-3l8.5-8.5 3 3L5 14z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        <span class="label">Edit</span>
+      </button>
     </header>
 
     <div class="content">
@@ -55,11 +61,24 @@
     <p id="note" class="note" hidden role="status"></p>
 
     <div id="settings" class="settings" hidden>
-      <label class="check">
-        <input id="s-inpage" type="checkbox" />
-        Use in page navigation
-      </label>
-      <p class="hint">Puts a small triangle in the top-left corner of every page that opens this dock, so you do not have to reach for the toolbar.</p>
+      <details>
+        <summary>Settings</summary>
+        <label class="check">
+          <input id="s-inpage" type="checkbox" />
+          Use in page navigation
+        </label>
+        <p class="hint">Puts a small triangle in the top-left corner of every page that opens this dock, so you do not have to reach for the toolbar.</p>
+        <label class="check">
+          <input id="s-bar" type="checkbox" />
+          Show shortcut bar
+        </label>
+        <p class="hint">Pins a slim bar of your apps to the top of every page, like Chrome's bookmarks bar. Replaces the triangle while it is on.</p>
+        <label class="field">
+          Background color
+          <input id="s-bg" type="text" autocomplete="off" spellcheck="false" placeholder="#f8fbf1 (default), rebeccapurple, rgb(…)" />
+        </label>
+        <p class="hint">For the shortcut bar and the dock. Any CSS color; leave empty for the default, #f8fbf1 (dark mode keeps its dark background).</p>
+      </details>
     </div>
 
     <footer id="footer" class="bar footer" hidden>

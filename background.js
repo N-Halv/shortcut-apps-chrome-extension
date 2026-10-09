@@ -13,7 +13,7 @@ import { planMoves } from "./grouping.js";
 import {
   CONTENT_SCRIPT_ID,
   IN_PAGE_ORIGINS,
-  effectiveInPageNav,
+  needsContentScript,
   readSettings,
 } from "./settings.js";
 
@@ -127,7 +127,8 @@ async function group(targetWindowId) {
 
 // Send an app's tab back to its launch URL, discarding whatever route it
 // wandered onto. Already sitting on the launch URL means a plain reload, so the
-// button refreshes in either case rather than quietly doing nothing.
+// button refreshes in either case rather than quietly doing nothing. The tab
+// is brought to the front afterwards, as a launch would.
 async function reset(appId) {
   const app = (await getApps()).find((candidate) => candidate.id === appId);
   if (!app) return { status: "unknown-app" };
@@ -146,18 +147,10 @@ async function reset(appId) {
   if (tab.url === app.url) await chrome.tabs.reload(tabId).catch(() => {});
   else await chrome.tabs.update(tabId, { url: app.url }).catch(() => {});
 
-  return { status: "reset" };
-}
+  // Resetting is also a way of going there: show the tab that was just reset.
+  await focusTab(tab).catch(() => {});
 
-async function closeApp(appId) {
-  const links = await getLinks();
-  const tabId = links[appId];
-  delete links[appId];
-  await setLinks(links);
-  if (typeof tabId === "number") {
-    await chrome.tabs.remove(tabId).catch(() => {});
-  }
-  return { status: "closed" };
+  return { status: "reset" };
 }
 
 // ------------------------------------------------- in-page navigation
@@ -209,7 +202,7 @@ async function applyInPageNav(enabled) {
 async function reconcileInPageNav() {
   const { settings } = await chrome.storage.sync.get("settings");
   const granted = await chrome.permissions.contains({ origins: IN_PAGE_ORIGINS });
-  await applyInPageNav(effectiveInPageNav(settings, granted));
+  await applyInPageNav(needsContentScript(settings, granted));
 }
 
 chrome.runtime.onStartup.addListener(reconcileInPageNav);
@@ -222,8 +215,11 @@ chrome.permissions.onRemoved.addListener(async () => {
   if (granted) return;
 
   const { settings } = await chrome.storage.sync.get("settings");
-  if (readSettings(settings).inPageNav) {
-    await chrome.storage.sync.set({ settings: { ...readSettings(settings), inPageNav: false } });
+  const current = readSettings(settings);
+  if (current.inPageNav || current.shortcutBar) {
+    await chrome.storage.sync.set({
+      settings: { ...current, inPageNav: false, shortcutBar: false },
+    });
   }
   await applyInPageNav(false);
 });
@@ -261,7 +257,7 @@ chrome.tabs.onReplaced.addListener(async (addedTabId, removedTabId) => {
 });
 
 // Navigating a linked tab out of the app's scope releases the link, so the
-// next click opens a fresh instance and the dock's live indicator goes dark.
+// next click opens a fresh instance and the dock's reload button goes away.
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   if (!changeInfo.url) return;
 
@@ -284,15 +280,16 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
 const handlers = {
   launch: (message) => launch(message.appId),
   reset: (message) => reset(message.appId),
-  close: (message) => closeApp(message.appId),
-  group: (message) => group(message.windowId),
+  // A bar in a page has no window of its own to report, so fall back on the
+  // window of the tab the message came from.
+  group: (message, sender) => group(message.windowId ?? sender.tab?.windowId),
   links: () => getLinks(),
   inPageNav: (message) => applyInPageNav(message.enabled === true),
 };
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const handler = handlers[message?.type];
   if (!handler) return false;
-  handler(message).then(sendResponse, (error) => sendResponse({ error: String(error) }));
+  handler(message, sender).then(sendResponse, (error) => sendResponse({ error: String(error) }));
   return true;
 });

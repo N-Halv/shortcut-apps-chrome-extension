@@ -1,5 +1,5 @@
 :root {
-  --bg: #ffffff;
+  --bg: #f8fbf1;
   --bg-sunken: #f4f4f5;
   --fg: #18181b;
   --fg-muted: #71717a;
@@ -140,7 +140,10 @@ body {
   width: 16px;
   height: 16px;
   flex: none;
-  border-radius: 3px;
+  /* Icons whose artwork runs right to the edge look clipped when drawn flush
+     with the box, so keep a pixel of margin around them. */
+  padding: 1px;
+  object-fit: contain;
 }
 
 .launch .name {
@@ -148,14 +151,6 @@ body {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-}
-
-.dot {
-  width: 6px;
-  height: 6px;
-  flex: none;
-  border-radius: 50%;
-  background: var(--live);
 }
 
 .handle {
@@ -371,4 +366,147 @@ html.embedded body {
 html.embedded body {
   border-radius: 10px;
   overflow: hidden;
+}
+
+/* --------------------------------------------------------- shortcut bar */
+
+/* The same document a third time: a slim horizontal strip inside the bar's
+   iframe. The list and the per-row reload button are the dock's own;
+   only the layout changes, and everything that edits the list stays in the
+   dropdown that Edit opens. */
+.glyph {
+  display: none;
+}
+
+html.bar,
+html.bar body {
+  height: 100%;
+  width: 100%;
+  max-height: none;
+  overflow: hidden;
+}
+
+html.bar body {
+  flex-direction: row;
+  align-items: center;
+}
+
+html.bar .bar {
+  flex: none;
+  gap: 2px;
+  padding: 0 6px 0 0;
+  border-bottom: none;
+}
+
+html.bar .bar h1,
+html.bar .label,
+html.bar .form,
+html.bar .footer,
+html.bar .settings {
+  display: none;
+}
+
+html.bar .bar .ghost {
+  display: flex;
+  align-items: center;
+  padding: 5px;
+  border-color: transparent;
+}
+
+html.bar .bar .ghost:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+
+html.bar .glyph {
+  display: block;
+}
+
+html.bar .content {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+html.bar .list {
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  padding: 0 6px 0 0;
+  width: max-content;
+}
+
+html.bar .row {
+  flex: none;
+  gap: 0;
+}
+
+html.bar .launch {
+  flex: none;
+  padding: 4px 8px;
+  gap: 6px;
+}
+
+html.bar .launch .name {
+  flex: none;
+  max-width: 140px;
+}
+
+html.bar .icon {
+  padding: 4px 5px;
+  font-size: 12px;
+}
+
+html.bar .empty {
+  padding: 0 4px;
+  white-space: nowrap;
+}
+
+/* Status messages have no room under a 36px bar, so they sit at its right end. */
+html.bar .note {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border: none;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------- collapsible settings */
+
+.settings summary {
+  color: var(--fg-muted);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.settings details[open] summary {
+  margin-bottom: 8px;
+}
+
+.settings .field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  color: var(--fg);
+}
+
+.settings .field input {
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  font: 13px/1.4 system-ui, sans-serif;
+}
+
+.settings .field input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
 }

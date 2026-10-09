@@ -8,7 +8,12 @@
 // the page. `embedded` covers the few differences that follow from having a
 // parent frame rather than being browser chrome.
 
-import { IN_PAGE_ORIGINS, effectiveInPageNav, readSettings } from "./settings.js";
+import {
+  IN_PAGE_ORIGINS,
+  effectiveInPageNav,
+  effectiveShortcutBar,
+  readSettings,
+} from "./settings.js";
 
 const list = document.getElementById("list");
 const empty = document.getElementById("empty");
@@ -22,6 +27,8 @@ const addCurrent = document.getElementById("add-current");
 const cancel = document.getElementById("cancel");
 const settingsRow = document.getElementById("settings");
 const inPageNav = document.getElementById("s-inpage");
+const shortcutBar = document.getElementById("s-bar");
+const backgroundColor = document.getElementById("s-bg");
 
 const fields = {
   name: document.getElementById("f-name"),
@@ -32,12 +39,17 @@ const fields = {
   adopt: document.getElementById("f-adopt"),
 };
 
-const embedded = new URLSearchParams(location.search).get("embedded") === "1";
+const params = new URLSearchParams(location.search);
+// `bar` is the shortcut bar's own strip; `embedded` is the dropdown panel. Both
+// live in an iframe, but only the panel is sized to its content.
+const bar = params.get("bar") === "1";
+const embedded = bar || params.get("embedded") === "1";
 
 let apps = [];
 let links = {};
 let settings = readSettings(null);
-let editing = false;
+// The bar's Edit button opens this document as a dropdown already in edit mode.
+let editing = !bar && params.get("edit") === "1";
 let draftId = null;
 let dragId = null;
 let noteTimer = null;
@@ -112,12 +124,6 @@ function render() {
     launch.append(icon, name);
 
     const live = typeof links[app.id] === "number";
-    if (live) {
-      const dot = document.createElement("span");
-      dot.className = "dot";
-      dot.title = "Open — click to switch to it";
-      launch.append(dot);
-    }
 
     launch.title = live ? `Switch to ${app.name}` : `Open ${app.name}`;
     launch.addEventListener("click", () => launchApp(app.id));
@@ -131,7 +137,6 @@ function render() {
     } else if (live) {
       row.append(
         iconButton("↻", `Reload ${app.name} at its launch URL`, "reset", () => resetApp(app.id)),
-        iconButton("✕", `Close ${app.name}`, "remove", () => closeApp(app.id)),
       );
     }
 
@@ -185,17 +190,13 @@ async function launchApp(appId) {
   await chrome.runtime.sendMessage({ type: "launch", appId });
   postToPanel({ type: "close" });
   // Focusing a tab usually dismisses the popup; refreshing is for the case
-  // where it does not, so the live dot stays accurate.
+  // where it does not, so the reload buttons stay accurate.
   await refresh();
 }
 
 async function resetApp(appId) {
   await chrome.runtime.sendMessage({ type: "reset", appId });
-  await refresh();
-}
-
-async function closeApp(appId) {
-  await chrome.runtime.sendMessage({ type: "close", appId });
+  postToPanel({ type: "close" });
   await refresh();
 }
 
@@ -254,9 +255,11 @@ groupButton.addEventListener("click", async () => {
   try {
     // Everything gathers into the window this popup was opened from.
     const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
+    // In the bar there is no popup window to ask about; the worker uses the
+    // window of the tab the bar is sitting in.
     const result = await chrome.runtime.sendMessage({
       type: "group",
-      windowId: active?.windowId,
+      windowId: bar ? undefined : active?.windowId,
     });
     await refresh();
 
@@ -338,13 +341,29 @@ cancel.addEventListener("click", closeForm);
 
 // ---------------------------------------------------------------- edit mode
 
-toggleEdit.addEventListener("click", () => {
-  editing = !editing;
+function renderEditButton() {
   toggleEdit.setAttribute("aria-pressed", String(editing));
-  toggleEdit.textContent = editing ? "Done" : "Edit";
+  toggleEdit.querySelector(".label").textContent = editing ? "Done" : "Edit";
+  toggleEdit.title = editing ? "Done" : "Edit";
+}
+
+toggleEdit.addEventListener("click", () => {
+  // The bar has no room for the editor, so it asks the page to drop down the
+  // dock panel instead.
+  if (bar) {
+    postToPanel({ type: "edit" });
+    return;
+  }
+
+  editing = !editing;
+  // A dropdown opened from the bar exists only to edit, so finishing closes it.
+  if (embedded && !editing) postToPanel({ type: "close" });
+  renderEditButton();
   if (!editing) closeForm();
   render();
 });
+
+renderEditButton();
 
 list.addEventListener("dragstart", (event) => {
   const row = event.target.closest(".row");
@@ -385,41 +404,87 @@ list.addEventListener("dragend", () => {
 
 // ------------------------------------------------- in-page navigation
 
-async function renderInPageNav() {
-  const granted = await chrome.permissions.contains({ origins: IN_PAGE_ORIGINS });
-  inPageNav.checked = effectiveInPageNav(settings, granted);
+// Whatever was typed goes straight into `background-color`. The browser drops
+// a value it cannot parse, which leaves the theme's own background in place.
+function applyBackground() {
+  document.body.style.backgroundColor = settings.backgroundColor;
+  if (document.activeElement !== backgroundColor) {
+    backgroundColor.value = settings.backgroundColor;
+  }
 }
 
-async function setInPageNav(enabled) {
-  settings = { ...settings, inPageNav: enabled };
-  await chrome.storage.sync.set({ settings });
-  await chrome.runtime.sendMessage({ type: "inPageNav", enabled });
-}
-
-inPageNav.addEventListener("change", () => {
-  if (!inPageNav.checked) {
-    // Unregister first, while the permission is still held, then hand the host
-    // access back so switching the feature off does not leave the extension
-    // holding access to every page.
-    setInPageNav(false)
-      .then(() => chrome.permissions.remove({ origins: IN_PAGE_ORIGINS }))
-      .then(() => showNote("In-page triangle turned off."))
-      .catch(() => showNote("Could not turn that off."));
+backgroundColor.addEventListener("change", async () => {
+  const value = backgroundColor.value.trim();
+  const valid = value === "" || CSS.supports("background-color", value);
+  if (!valid) {
+    showNote(`“${value}” is not a CSS color.`);
     return;
   }
+  settings = { ...settings, backgroundColor: value };
+  await chrome.storage.sync.set({ settings });
+  applyBackground();
+});
 
-  // chrome.permissions.request needs this click's user gesture, and an await
-  // before the call would spend it. Hence the callback rather than a promise.
-  chrome.permissions.request({ origins: IN_PAGE_ORIGINS }, (granted) => {
-    if (!granted) {
-      inPageNav.checked = false;
-      showNote("App Dock needs access to pages to draw the triangle.");
+async function renderInPageNav() {
+  applyBackground();
+  const granted = await chrome.permissions.contains({ origins: IN_PAGE_ORIGINS });
+  inPageNav.checked = effectiveInPageNav(settings, granted);
+  shortcutBar.checked = effectiveShortcutBar(settings, granted);
+}
+
+// The triangle and the bar share one content script and one permission, so the
+// script stays registered while either is on, and the host access is handed
+// back only once both are off.
+async function setFlag(key, enabled) {
+  settings = { ...settings, [key]: enabled };
+  await chrome.storage.sync.set({ settings });
+  await chrome.runtime.sendMessage({
+    type: "inPageNav",
+    enabled: settings.inPageNav || settings.shortcutBar,
+  });
+}
+
+function bindFlag(checkbox, key, text) {
+  checkbox.addEventListener("change", () => {
+    if (!checkbox.checked) {
+      // Update first, while the permission is still held, then release it if
+      // nothing else needs it.
+      setFlag(key, false)
+        .then(() =>
+          settings.inPageNav || settings.shortcutBar
+            ? undefined
+            : chrome.permissions.remove({ origins: IN_PAGE_ORIGINS }),
+        )
+        .then(() => showNote(text.off))
+        .catch(() => showNote("Could not turn that off."));
       return;
     }
-    setInPageNav(true)
-      .then(() => showNote("Triangle added to the top-left of every page."))
-      .catch(() => showNote("Could not turn that on."));
+
+    // chrome.permissions.request needs this click's user gesture, and an await
+    // before the call would spend it. Hence the callback rather than a promise.
+    chrome.permissions.request({ origins: IN_PAGE_ORIGINS }, (granted) => {
+      if (!granted) {
+        checkbox.checked = false;
+        showNote(text.denied);
+        return;
+      }
+      setFlag(key, true)
+        .then(() => showNote(text.on))
+        .catch(() => showNote("Could not turn that on."));
+    });
   });
+}
+
+bindFlag(inPageNav, "inPageNav", {
+  on: "Triangle added to the top-left of every page.",
+  off: "In-page triangle turned off.",
+  denied: "App Dock needs access to pages to draw the triangle.",
+});
+
+bindFlag(shortcutBar, "shortcutBar", {
+  on: "Shortcut bar added to the top of every page.",
+  off: "Shortcut bar turned off.",
+  denied: "App Dock needs access to pages to draw the shortcut bar.",
 });
 
 // ---------------------------------------------------------------- embedded
@@ -433,8 +498,11 @@ function postToPanel(message) {
 }
 
 if (embedded) {
-  document.documentElement.classList.add("embedded");
+  document.documentElement.classList.add(bar ? "bar" : "embedded");
+}
 
+// The bar is a fixed height set by the page, so only the dropdown reports one.
+if (embedded && !bar) {
   const reportHeight = () => {
     postToPanel({ type: "height", value: Math.ceil(document.body.getBoundingClientRect().height) });
   };
