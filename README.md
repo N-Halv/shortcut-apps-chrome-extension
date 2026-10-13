@@ -72,6 +72,44 @@ Two things to know: the triangle only appears on `http(s)` pages, because no
 extension may draw on `chrome://` pages or the Web Store; and the panel is a
 frame, so a site with a strict enough `frame-src` policy can refuse it.
 
+## Sub-links
+
+An app can have **sub-links**: named URLs that live underneath it, such as
+individual projects under Linear. Add them in the app's edit form, under
+*Sub-links under this app* (name and URL each; **Add sub-link** for more).
+
+An app with sub-links shows a small ▾ next to its name. In the dock it unfolds
+the children inline under the app; in the shortcut bar it drops a menu down from
+the arrow. Picking one sends the app's tab there — or opens a new tab at that URL
+if the app is not open — and the app stays linked to that tab, so clicking the
+app itself afterwards switches to it as usual.
+
+Keep sub-link URLs inside the app's scope (the host it counts as the same app
+on). If one leaves it, the tab stops counting as that app once it lands there.
+
+## New tab page
+
+App Dock replaces Chrome's new tab page with a launcher: a search box over a grid
+of your apps, with Group and Edit as icon buttons in the top-right corner. Click
+an app to open or switch to it (the spare new tab is closed behind you); the ▾ on
+a tile drops its sub-links. Edit drops the usual editor down from the corner.
+
+The search box visits anything that looks like a URL and otherwise searches with
+your default search engine (the `search` permission, which Chrome does not warn
+about). It uses your background color setting.
+
+If **Show shortcut bar** is on, the new tab page draws the bar across the top too,
+where you would expect bookmarks to be, and moves Group and Edit up into it. Chrome
+does not let extensions inject into its own new tab page, so this is the page
+itself rather than the in-page bar; it behaves the same (Edit drops the editor
+down from under it, ▾ drops sub-links) and needs only the setting, not the page
+permission. Launching from it closes the spare new tab, as the grid does.
+
+This is declared in the manifest (`chrome_url_overrides`), so it is always on once
+the extension is loaded — there is no setting to switch it off. Chrome allows one
+extension to replace the new tab page; remove the override from `manifest.json` to
+get the default page back.
+
 ## Shortcut bar
 
 Tick **Show shortcut bar** in **Edit** for a Chrome-style bookmarks bar pinned
@@ -161,6 +199,7 @@ orders them — the reload buttons appear as a side effect.
 | `scope.js` | Pure scope matching and tab resolution, shared with the tests. |
 | `settings.js` | Pure settings shape and the in-page permission constants. |
 | `content.js` | The in-page triangle, the shortcut bar, and the panel that frames the popup. |
+| `newtab.{html,css,js}` | The new tab page: search box and app grid. |
 | `grouping.js` | Pure move planning for Group, shared with the tests. |
 | `popup.{html,css,js}` | The dock UI. Renders, edits, and asks the worker to launch. |
 | `test/scope.test.mjs` | Scope matching tests. |

@@ -510,3 +510,56 @@ html.bar .note {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
 }
+
+/* ---------------------------------------------------------------- sub-links */
+
+.icon.chevron {
+  display: flex;
+  align-items: center;
+  padding: 6px;
+}
+
+.icon.chevron svg {
+  width: 11px;
+  height: 11px;
+}
+
+.icon.chevron[aria-expanded="true"] {
+  color: var(--accent);
+}
+
+html.bar .icon.chevron {
+  margin-left: -6px;
+  padding: 6px 5px;
+}
+
+/* Unfolded children sit under their app, indented past its icon. */
+.sub .launch {
+  width: 100%;
+  padding-left: 33px;
+  color: var(--fg-muted);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sub .launch:hover {
+  color: var(--fg);
+}
+
+.form .sublinks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form .sublink {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr auto;
+  gap: 4px;
+  align-items: center;
+}
+
+.form .sublink input {
+  min-width: 0;
+}

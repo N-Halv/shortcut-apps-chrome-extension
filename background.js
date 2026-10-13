@@ -8,7 +8,7 @@
 // meaningful for the life of the browser session, which is also exactly how
 // long the service worker may be asleep between clicks.
 
-import { findTab, inScope } from "./scope.js";
+import { findTab, inScope, parseURL } from "./scope.js";
 import { planMoves } from "./grouping.js";
 import {
   CONTENT_SCRIPT_ID,
@@ -61,6 +61,35 @@ async function launch(appId) {
   }
 
   const created = await chrome.tabs.create({ url: app.url });
+  links[appId] = created.id;
+  await setLinks(links);
+  return { status: "opened" };
+}
+
+// Jump to one of an app's sub-links: the app's own tab if it has one, sent to
+// the child URL, otherwise a fresh tab there. Either way the app ends up linked
+// to that tab, so the next click on the app itself finds it.
+async function openLink(appId, linkId) {
+  const app = (await getApps()).find((candidate) => candidate.id === appId);
+  const child = app?.links?.find((candidate) => candidate.id === linkId);
+  const url = parseURL(child?.url ?? "");
+  if (!child || !url || (url.protocol !== "https:" && url.protocol !== "http:")) {
+    return { status: "unknown-link" };
+  }
+
+  const links = await getLinks();
+  const tabs = await chrome.tabs.query({});
+  const existing = findTab(app, links, tabs, new Set(Object.values(links)));
+
+  if (existing) {
+    links[appId] = existing.id;
+    await setLinks(links);
+    await chrome.tabs.update(existing.id, { url: child.url });
+    await focusTab(existing);
+    return { status: "navigated" };
+  }
+
+  const created = await chrome.tabs.create({ url: child.url });
   links[appId] = created.id;
   await setLinks(links);
   return { status: "opened" };
@@ -280,6 +309,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
 const handlers = {
   launch: (message) => launch(message.appId),
   reset: (message) => reset(message.appId),
+  openLink: (message) => openLink(message.appId, message.linkId),
   // A bar in a page has no window of its own to report, so fall back on the
   // window of the tab the message came from.
   group: (message, sender) => group(message.windowId ?? sender.tab?.windowId),

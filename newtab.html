@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>New Tab</title>
+    <link rel="stylesheet" href="newtab.css" />
+  </head>
+  <body>
+    <!-- The shortcut bar, when that setting is on. Chrome will not run the
+         in-page bar on its own new tab page, so this page draws it. -->
+    <iframe id="bar" class="bar" title="App Dock shortcut bar" hidden></iframe>
+
+    <header id="tools" class="tools">
+      <button id="group" class="tool" type="button" aria-label="Group" title="Gather open app tabs into this window, in this order">
+        <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><rect x="1.5" y="3" width="5" height="4.5" rx="1" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="9.5" y="3" width="5" height="4.5" rx="1" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="1.5" y="10" width="13" height="3" rx="1" fill="currentColor"/></svg>
+      </button>
+      <button id="edit" class="tool" type="button" aria-label="Edit" title="Edit" aria-expanded="false">
+        <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path d="M2 14v-3l8.5-8.5 3 3L5 14z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+      </button>
+    </header>
+
+    <main>
+      <form id="search" class="search" role="search">
+        <input id="q" type="search" placeholder="Search Google or type a URL" aria-label="Search" autocomplete="off" />
+      </form>
+
+      <ul id="grid" class="grid" aria-label="Apps"></ul>
+      <p id="empty" class="empty" hidden>No apps yet. Click the pencil to add one.</p>
+    </main>
+
+    <div id="menu" class="bar-menu" role="menu" hidden></div>
+
+    <p id="note" class="note" hidden role="status"></p>
+    <iframe id="panel" class="panel" title="App Dock editor" hidden></iframe>
+
+    <script src="newtab.js" type="module"></script>
+  </body>
+</html>

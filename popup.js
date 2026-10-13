@@ -25,6 +25,8 @@ const toggleEdit = document.getElementById("toggle-edit");
 const addNew = document.getElementById("add-new");
 const addCurrent = document.getElementById("add-current");
 const cancel = document.getElementById("cancel");
+const sublinkList = document.getElementById("f-links");
+const addSublink = document.getElementById("add-sublink");
 const settingsRow = document.getElementById("settings");
 const inPageNav = document.getElementById("s-inpage");
 const shortcutBar = document.getElementById("s-bar");
@@ -52,6 +54,12 @@ let settings = readSettings(null);
 let editing = !bar && params.get("edit") === "1";
 let draftId = null;
 let dragId = null;
+// Apps whose sub-links are unfolded in the list. Not persisted: it is a view
+// state, and a dock that reopens folded is the tidier default.
+const expanded = new Set();
+
+const CHEVRON =
+  '<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 let noteTimer = null;
 
 // ---------------------------------------------------------------- storage
@@ -129,6 +137,30 @@ function render() {
     launch.addEventListener("click", () => launchApp(app.id));
     row.append(launch);
 
+    const children = app.links ?? [];
+    let chevron = null;
+    if (children.length > 0) {
+      chevron = iconButton("▾", `Sub-links for ${app.name}`, "chevron", () => {
+        if (bar) {
+          // The bar is only 36px tall, so the page draws the menu for it.
+          postToPanel({
+            type: "submenu",
+            appId: app.id,
+            left: Math.round(chevron.getBoundingClientRect().left),
+          });
+          return;
+        }
+        if (!expanded.delete(app.id)) expanded.add(app.id);
+        render();
+      });
+      // A drawn chevron rather than the ▾ character, whose position in the line
+      // varies with the font and sat below the text's middle.
+      chevron.innerHTML = CHEVRON;
+      chevron.setAttribute("aria-haspopup", "true");
+      chevron.setAttribute("aria-expanded", String(expanded.has(app.id)));
+      row.append(chevron);
+    }
+
     if (editing) {
       row.append(
         iconButton("✏️", `Edit ${app.name}`, "", () => openForm(app)),
@@ -141,6 +173,21 @@ function render() {
     }
 
     list.append(row);
+
+    if (!bar && expanded.has(app.id)) {
+      for (const child of children) {
+        const item = document.createElement("li");
+        item.className = "sub";
+        const go = document.createElement("button");
+        go.type = "button";
+        go.className = "launch";
+        go.textContent = child.name;
+        go.title = child.url;
+        go.addEventListener("click", () => openLink(app.id, child.id));
+        item.append(go);
+        list.append(item);
+      }
+    }
   }
 
   footer.hidden = !editing;
@@ -189,14 +236,23 @@ function flashRow(appId) {
 async function launchApp(appId) {
   await chrome.runtime.sendMessage({ type: "launch", appId });
   postToPanel({ type: "close" });
+  postToPanel({ type: "launched" });
   // Focusing a tab usually dismisses the popup; refreshing is for the case
   // where it does not, so the reload buttons stay accurate.
+  await refresh();
+}
+
+async function openLink(appId, linkId) {
+  await chrome.runtime.sendMessage({ type: "openLink", appId, linkId });
+  postToPanel({ type: "close" });
+  postToPanel({ type: "launched" });
   await refresh();
 }
 
 async function resetApp(appId) {
   await chrome.runtime.sendMessage({ type: "reset", appId });
   postToPanel({ type: "close" });
+  postToPanel({ type: "launched" });
   await refresh();
 }
 
@@ -291,11 +347,40 @@ function openForm(app) {
   fields.subdomains.checked = Boolean(app?.scope?.matchSubdomains);
   fields.prefix.value = app?.scope?.pathPrefix ?? "";
   fields.adopt.checked = app ? app.adopt !== false : true;
+  sublinkList.textContent = "";
+  for (const child of app?.links ?? []) addSublinkRow(child);
   form.hidden = false;
   empty.hidden = true;
   fields.name.focus();
   fields.name.select();
 }
+
+function addSublinkRow(child = {}) {
+  const row = document.createElement("div");
+  row.className = "sublink";
+  row.dataset.id = child.id ?? crypto.randomUUID();
+
+  const name = document.createElement("input");
+  name.type = "text";
+  name.placeholder = "Name";
+  name.value = child.name ?? "";
+  name.setAttribute("aria-label", "Sub-link name");
+  name.autocomplete = "off";
+
+  const url = document.createElement("input");
+  url.type = "url";
+  url.placeholder = "https://…";
+  url.value = child.url ?? "";
+  url.setAttribute("aria-label", "Sub-link URL");
+  url.autocomplete = "off";
+
+  const remove = iconButton("✕", "Remove sub-link", "remove", () => row.remove());
+  row.append(name, url, remove);
+  sublinkList.append(row);
+  if (!child.url) name.focus();
+}
+
+addSublink.addEventListener("click", () => addSublinkRow());
 
 function closeForm() {
   form.hidden = true;
@@ -314,6 +399,27 @@ form.addEventListener("submit", async (event) => {
     return;
   }
 
+  // Rows left completely blank are just unused; anything half-filled has to be
+  // a real link, or the dropdown would show an entry that goes nowhere.
+  const sublinks = [];
+  for (const row of sublinkList.children) {
+    const [nameInput, urlInput] = row.querySelectorAll("input");
+    const childURL = urlInput.value.trim();
+    if (!childURL && !nameInput.value.trim()) continue;
+
+    const childParsed = safeURL(childURL);
+    if (!childParsed) {
+      showNote("Each sub-link needs a full http:// or https:// URL.");
+      urlInput.focus();
+      return;
+    }
+    sublinks.push({
+      id: row.dataset.id,
+      name: nameInput.value.trim() || childParsed.hostname + childParsed.pathname,
+      url: childURL,
+    });
+  }
+
   const host = fields.host.value.trim() || parsed.hostname;
   const prefix = fields.prefix.value.trim();
   const draft = {
@@ -321,6 +427,7 @@ form.addEventListener("submit", async (event) => {
     name: fields.name.value.trim() || host,
     url,
     adopt: fields.adopt.checked,
+    links: sublinks,
     scope: {
       host,
       matchSubdomains: fields.subdomains.checked,

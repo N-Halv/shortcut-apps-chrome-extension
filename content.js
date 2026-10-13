@@ -100,6 +100,49 @@ const STYLE = `
     left: 8px;
   }
 
+  .menu {
+    position: fixed;
+    top: ${BAR_HEIGHT}px;
+    z-index: 2147483647;
+    display: none;
+    min-width: 180px;
+    max-width: 320px;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 4px;
+    border: 1px solid rgba(63, 63, 70, 0.28);
+    border-radius: 8px;
+    background: #f8fbf1;
+    box-shadow: 0 10px 34px rgba(0, 0, 0, 0.26);
+    font: 13px/1.4 system-ui, -apple-system, sans-serif;
+  }
+
+  .menu.open {
+    display: block;
+  }
+
+  .menu button {
+    display: block;
+    width: 100%;
+    padding: 6px 10px;
+    border: none;
+    border-radius: 6px;
+    background: none;
+    color: #18181b;
+    font: inherit;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+  }
+
+  .menu button:hover,
+  .menu button:focus-visible {
+    background: rgba(63, 63, 70, 0.12);
+    outline: none;
+  }
+
   .tab.hidden {
     display: none;
   }
@@ -107,6 +150,9 @@ const STYLE = `
   @media (prefers-color-scheme: dark) {
     .panel { background: #18181b; border-color: rgba(250, 250, 250, 0.16); }
     .bar { background: #18181b; }
+    .menu { background: #18181b; border-color: rgba(250, 250, 250, 0.16); }
+    .menu button { color: #fafafa; }
+    .menu button:hover, .menu button:focus-visible { background: rgba(250, 250, 250, 0.12); }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -126,7 +172,11 @@ if (window.top === window && !globalThis.__appDockInstalled) {
 // settings.js: only a real boolean true counts as on.
 function readFlags(stored) {
   const raw = stored && typeof stored === "object" ? stored : {};
-  return { inPageNav: raw.inPageNav === true, shortcutBar: raw.shortcutBar === true };
+  return {
+    inPageNav: raw.inPageNav === true,
+    shortcutBar: raw.shortcutBar === true,
+    backgroundColor: typeof raw.backgroundColor === "string" ? raw.backgroundColor.trim() : "",
+  };
 }
 
 function install() {
@@ -154,9 +204,16 @@ function install() {
   panel.className = "panel";
   panel.setAttribute("title", "App Dock");
 
-  root.append(style, tab, bar, panel);
+  // The dropdown of an app's sub-links, drawn here because the bar's own frame
+  // is only as tall as the bar.
+  const menu = document.createElement("div");
+  menu.className = "menu";
+  menu.setAttribute("role", "menu");
 
-  let flags = { inPageNav: false, shortcutBar: false };
+  root.append(style, tab, bar, panel, menu);
+
+  let flags = { inPageNav: false, shortcutBar: false, backgroundColor: "" };
+  let menuAppId = null;
   let wanted = false;
   let open = false;
 
@@ -174,8 +231,44 @@ function install() {
     if (wanted) attach();
   }).observe(document.documentElement, { childList: true });
 
+  function closeMenu() {
+    menuAppId = null;
+    menu.classList.remove("open");
+  }
+
+  async function openMenu(appId, left) {
+    if (menuAppId === appId) {
+      closeMenu();
+      return;
+    }
+
+    const { apps = [] } = await chrome.storage.sync.get("apps");
+    const app = apps.find((candidate) => candidate.id === appId);
+    if (!app?.links?.length) return;
+
+    menu.textContent = "";
+    for (const child of app.links) {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.setAttribute("role", "menuitem");
+      item.textContent = child.name;
+      item.title = child.url;
+      item.addEventListener("click", () => {
+        chrome.runtime.sendMessage({ type: "openLink", appId, linkId: child.id });
+        closeMenu();
+      });
+      menu.append(item);
+    }
+
+    menu.style.left = `${Math.max(4, Math.min(left, window.innerWidth - 200))}px`;
+    menuAppId = appId;
+    setOpen(false);
+    menu.classList.add("open");
+  }
+
   function setOpen(next, fromBar = false) {
     open = next;
+    if (open) closeMenu();
     tab.classList.toggle("open", open);
     panel.classList.toggle("open", open);
     panel.classList.toggle("under-bar", open && fromBar);
@@ -195,11 +288,14 @@ function install() {
 
   function apply(next) {
     flags = next;
+    // An unparseable color is dropped by the browser, leaving the default.
+    menu.style.backgroundColor = flags.backgroundColor;
     wanted = flags.inPageNav || flags.shortcutBar;
 
     if (!wanted) {
       document.documentElement.style.removeProperty("margin-top");
       setOpen(false);
+      closeMenu();
       host.remove();
       return;
     }
@@ -235,11 +331,15 @@ function install() {
   // The bar is an iframe too, so its clicks never get here; it asks for the
   // panel by message instead.
   document.addEventListener("click", (event) => {
-    if (open && !event.composedPath().includes(host)) setOpen(false);
+    if (event.composedPath().includes(host)) return;
+    if (open) setOpen(false);
+    closeMenu();
   }, true);
 
   document.addEventListener("keydown", (event) => {
-    if (open && event.key === "Escape") setOpen(false);
+    if (event.key !== "Escape") return;
+    if (open) setOpen(false);
+    closeMenu();
   }, true);
 
   // The popup talks back for the things it alone knows: how tall it is, when
@@ -253,8 +353,15 @@ function install() {
     if (data.type === "height" && Number.isFinite(data.value)) {
       panel.style.height = `${Math.min(Math.max(data.value, 40), 560)}px`;
     }
-    if (data.type === "close") setOpen(false);
+    if (data.type === "close") {
+      setOpen(false);
+      closeMenu();
+    }
+    if (data.type === "submenu" && typeof data.appId === "string" && Number.isFinite(data.left)) {
+      openMenu(data.appId, data.left);
+    }
     if (data.type === "edit") {
+      closeMenu();
       setOpen(!(open && panel.classList.contains("under-bar")), true);
     }
   });
