@@ -386,6 +386,11 @@ html.in-bar body {
   overflow: hidden;
 }
 
+/* Edges the strip off from the page below it. */
+html.in-bar {
+  border-bottom: 1px solid var(--border);
+}
+
 html.in-bar body {
   flex-direction: row;
   align-items: center;
