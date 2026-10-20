@@ -286,6 +286,31 @@ function install() {
     }
   }
 
+  // Properties set on <html> and <body> to make room for the bar. The page
+  // scrolls inside <body>, not the window, so that a sticky header (top: 0)
+  // sticks to the bottom edge of the bar instead of sliding under it.
+  const ROOM_PROPS = ["margin-top", "height", "overflow", "position", "inset"];
+
+  function clearRoom() {
+    for (const el of [document.documentElement, document.body]) {
+      if (!el) continue;
+      for (const name of ROOM_PROPS) el.style.removeProperty(name);
+    }
+  }
+
+  function makeRoom() {
+    const root = document.documentElement.style;
+    root.setProperty("margin-top", `${BAR_HEIGHT}px`, "important");
+    root.setProperty("height", `calc(100% - ${BAR_HEIGHT}px)`, "important");
+    root.setProperty("overflow", "hidden", "important");
+    root.setProperty("position", "relative", "important");
+    const body = document.body;
+    if (!body) return;
+    body.style.setProperty("position", "absolute", "important");
+    body.style.setProperty("inset", "0", "important");
+    body.style.setProperty("overflow", "auto", "important");
+  }
+
   function apply(next) {
     flags = next;
     // An unparseable color is dropped by the browser, leaving the default.
@@ -293,7 +318,7 @@ function install() {
     wanted = flags.inPageNav || flags.shortcutBar;
 
     if (!wanted) {
-      document.documentElement.style.removeProperty("margin-top");
+      clearRoom();
       setOpen(false);
       closeMenu();
       host.remove();
@@ -308,9 +333,9 @@ function install() {
     // page's content security policy does not restrict the way it does a
     // <style> element.
     if (flags.shortcutBar) {
-      document.documentElement.style.setProperty("margin-top", `${BAR_HEIGHT}px`, "important");
+      makeRoom();
     } else {
-      document.documentElement.style.removeProperty("margin-top");
+      clearRoom();
     }
     // The bar carries its own Edit button, which makes the triangle redundant.
     tab.classList.toggle("hidden", flags.shortcutBar);
