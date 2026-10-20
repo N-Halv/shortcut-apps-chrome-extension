@@ -27,6 +27,7 @@ let apps = [];
 let openMenuId = null;
 let barMenuAppId = null;
 let panelFromBar = false;
+let collapseTimer = null;
 let noteTimer = null;
 
 function faviconURL(pageURL) {
@@ -176,6 +177,7 @@ window.addEventListener("message", (event) => {
   if (data.type === "submenu" && typeof data.appId === "string" && Number.isFinite(data.left)) {
     toggleBarMenu(data.appId, data.left);
   }
+  if (data.type === "collapse") collapseBar();
 });
 
 // ------------------------------------------------------------- shortcut bar
@@ -207,6 +209,15 @@ function toggleBarMenu(appId, left) {
   barMenuAppId = appId;
   setEditing(false);
   barMenu.hidden = false;
+}
+
+// Same as the in-page bar: up and out of view for three seconds, then back.
+function collapseBar() {
+  closeBarMenu();
+  if (panelFromBar) setEditing(false);
+  bar.classList.add("collapsed");
+  clearTimeout(collapseTimer);
+  collapseTimer = setTimeout(() => bar.classList.remove("collapsed"), 3000);
 }
 
 // Mirrors the in-page bar: shown when "Show shortcut bar" is on. Unlike pages,

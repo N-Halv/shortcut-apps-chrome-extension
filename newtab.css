@@ -238,6 +238,16 @@ main {
   border: none;
   background: var(--bg);
   color-scheme: light dark;
+  transition: transform 220ms ease;
+}
+
+/* Slid up out of view for a moment by the bar's collapse button. */
+.bar.collapsed {
+  transform: translateY(-100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar { transition: none; }
 }
 
 body.has-bar {

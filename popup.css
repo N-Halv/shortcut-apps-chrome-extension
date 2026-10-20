@@ -464,11 +464,30 @@ html.bar .empty {
   white-space: nowrap;
 }
 
-/* Status messages have no room under a 36px bar, so they sit at its right end. */
+.collapse {
+  display: none;
+}
+
+html.bar .collapse {
+  display: flex;
+  flex: none;
+  align-items: center;
+  margin: 0 6px 0 2px;
+  padding: 5px;
+  border-color: transparent;
+}
+
+html.bar .collapse:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+
+/* Status messages have no room under a 36px bar, so they sit at its right
+   end, just short of the collapse button. */
 html.bar .note {
   position: absolute;
   top: 0;
-  right: 0;
+  right: 34px;
   height: 100%;
   display: flex;
   align-items: center;

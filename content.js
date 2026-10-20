@@ -17,6 +17,7 @@
 
 const HOST_ID = "app-dock-in-page-host";
 const BAR_HEIGHT = 36;
+const COLLAPSE_MS = 3000;
 const EXTENSION_ORIGIN = new URL(chrome.runtime.getURL("/")).origin;
 
 const STYLE = `
@@ -67,10 +68,16 @@ const STYLE = `
     border: none;
     background: #f8fbf1;
     color-scheme: light dark;
+    transition: transform 220ms ease;
   }
 
   .bar.show {
     display: block;
+  }
+
+  /* Slid up out of view for a moment, so whatever it covers can be seen. */
+  .bar.collapsed {
+    transform: translateY(-100%);
   }
 
   .panel {
@@ -156,7 +163,7 @@ const STYLE = `
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .tab { transition: none; }
+    .tab, .bar { transition: none; }
   }
 `;
 
@@ -216,6 +223,7 @@ function install() {
   let menuAppId = null;
   let wanted = false;
   let open = false;
+  let collapseTimer = null;
 
   function attach() {
     // Attach to <html>, not <body>. Turbo-style apps — GitHub among them —
@@ -284,6 +292,16 @@ function install() {
     } else if (!panel.src || panel.src.includes("edit=1")) {
       panel.src = chrome.runtime.getURL("popup.html?embedded=1");
     }
+  }
+
+  // The page keeps its room while the bar is away: the point is to uncover
+  // something pinned under it, not to shift the whole page up and back.
+  function collapseBar() {
+    closeMenu();
+    if (open && panel.classList.contains("under-bar")) setOpen(false);
+    bar.classList.add("collapsed");
+    clearTimeout(collapseTimer);
+    collapseTimer = setTimeout(() => bar.classList.remove("collapsed"), COLLAPSE_MS);
   }
 
   // Properties set on <html> and <body> to make room for the bar. The page
@@ -369,7 +387,7 @@ function install() {
 
   // The popup talks back for the things it alone knows: how tall it is, when
   // it has done something that should dismiss the dock, and — from the bar —
-  // that Edit was pressed.
+  // that Edit or collapse was pressed.
   window.addEventListener("message", (event) => {
     if (event.origin !== EXTENSION_ORIGIN) return;
     const data = event.data;
@@ -385,6 +403,7 @@ function install() {
     if (data.type === "submenu" && typeof data.appId === "string" && Number.isFinite(data.left)) {
       openMenu(data.appId, data.left);
     }
+    if (data.type === "collapse") collapseBar();
     if (data.type === "edit") {
       closeMenu();
       setOpen(!(open && panel.classList.contains("under-bar")), true);

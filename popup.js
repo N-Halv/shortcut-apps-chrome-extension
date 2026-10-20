@@ -472,6 +472,11 @@ toggleEdit.addEventListener("click", () => {
 
 renderEditButton();
 
+// The host page owns the bar's frame, so it does the sliding.
+document.getElementById("collapse").addEventListener("click", () => {
+  postToPanel({ type: "collapse" });
+});
+
 list.addEventListener("dragstart", (event) => {
   const row = event.target.closest(".row");
   if (!row) return;
