@@ -199,17 +199,8 @@ button:disabled {
   cursor: default;
 }
 
-/* A fixed square, the same 28px as the header's icon buttons, whatever the
-   glyph's own width: ✕, ↻ and the chevron otherwise each came out a
-   different narrow rectangle. */
 .icon {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
+  padding: 5px 7px;
   border: none;
   background: none;
   color: var(--fg-muted);
@@ -464,6 +455,7 @@ html.bar .launch .name {
 }
 
 html.bar .icon {
+  padding: 4px 5px;
   font-size: 12px;
 }
 
@@ -540,6 +532,11 @@ html.bar .note {
 
 /* ---------------------------------------------------------------- sub-links */
 
+.icon.chevron {
+  display: flex;
+  align-items: center;
+  padding: 6px;
+}
 
 .icon.chevron svg {
   width: 11px;
@@ -551,7 +548,8 @@ html.bar .note {
 }
 
 html.bar .icon.chevron {
-  margin-left: -4px;
+  margin-left: -6px;
+  padding: 6px 5px;
 }
 
 /* Unfolded children sit under their app, indented past its icon. */
