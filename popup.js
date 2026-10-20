@@ -609,8 +609,10 @@ function postToPanel(message) {
   if (embedded) parent.postMessage({ source: "app-dock", ...message }, "*");
 }
 
+// Not "bar": the header's .bar rule would pad <html> too, squeezing <body>
+// to 15px and cropping every 28px button in the strip.
 if (embedded) {
-  document.documentElement.classList.add(bar ? "bar" : "embedded");
+  document.documentElement.classList.add(bar ? "in-bar" : "embedded");
 }
 
 // The bar is a fixed height set by the page, so only the dropdown reports one.

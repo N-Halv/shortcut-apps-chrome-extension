@@ -378,51 +378,51 @@ html.embedded body {
   display: none;
 }
 
-html.bar,
-html.bar body {
+html.in-bar,
+html.in-bar body {
   height: 100%;
   width: 100%;
   max-height: none;
   overflow: hidden;
 }
 
-html.bar body {
+html.in-bar body {
   flex-direction: row;
   align-items: center;
 }
 
-html.bar .bar {
+html.in-bar .bar {
   flex: none;
   gap: 2px;
   padding: 0 6px 0 0;
   border-bottom: none;
 }
 
-html.bar .bar h1,
-html.bar .label,
-html.bar .form,
-html.bar .footer,
-html.bar .settings {
+html.in-bar .bar h1,
+html.in-bar .label,
+html.in-bar .form,
+html.in-bar .footer,
+html.in-bar .settings {
   display: none;
 }
 
-html.bar .bar .ghost {
+html.in-bar .bar .ghost {
   display: flex;
   align-items: center;
   padding: 5px;
   border-color: transparent;
 }
 
-html.bar .bar .ghost:hover {
+html.in-bar .bar .ghost:hover {
   background: var(--hover);
   color: var(--fg);
 }
 
-html.bar .glyph {
+html.in-bar .glyph {
   display: block;
 }
 
-html.bar .content {
+html.in-bar .content {
   flex: 1;
   min-width: 0;
   overflow-x: auto;
@@ -430,7 +430,7 @@ html.bar .content {
   scrollbar-width: none;
 }
 
-html.bar .list {
+html.in-bar .list {
   flex-direction: row;
   align-items: center;
   gap: 2px;
@@ -438,28 +438,28 @@ html.bar .list {
   width: max-content;
 }
 
-html.bar .row {
+html.in-bar .row {
   flex: none;
   gap: 0;
 }
 
-html.bar .launch {
+html.in-bar .launch {
   flex: none;
   padding: 4px 8px;
   gap: 6px;
 }
 
-html.bar .launch .name {
+html.in-bar .launch .name {
   flex: none;
   max-width: 140px;
 }
 
-html.bar .icon {
+html.in-bar .icon {
   padding: 4px 5px;
   font-size: 12px;
 }
 
-html.bar .empty {
+html.in-bar .empty {
   padding: 0 4px;
   white-space: nowrap;
 }
@@ -468,7 +468,7 @@ html.bar .empty {
   display: none;
 }
 
-html.bar .collapse {
+html.in-bar .collapse {
   display: flex;
   flex: none;
   align-items: center;
@@ -477,14 +477,14 @@ html.bar .collapse {
   border-color: transparent;
 }
 
-html.bar .collapse:hover {
+html.in-bar .collapse:hover {
   background: var(--hover);
   color: var(--fg);
 }
 
 /* Status messages have no room under a 36px bar, so they sit at its right
    end, just short of the collapse button. */
-html.bar .note {
+html.in-bar .note {
   position: absolute;
   top: 0;
   right: 34px;
@@ -547,7 +547,7 @@ html.bar .note {
   color: var(--accent);
 }
 
-html.bar .icon.chevron {
+html.in-bar .icon.chevron {
   margin-left: -6px;
   padding: 6px 5px;
 }
