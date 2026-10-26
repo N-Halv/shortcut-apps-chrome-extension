@@ -17,7 +17,7 @@
 
 const HOST_ID = "app-dock-in-page-host";
 const BAR_HEIGHT = 36;
-const COLLAPSE_MS = 5000;
+const COLLAPSE_MS = 4000;
 // Matches the bar's own slide in STYLE, so the page and the bar move together.
 const SLIDE_MS = 220;
 const EXTENSION_ORIGIN = new URL(chrome.runtime.getURL("/")).origin;
