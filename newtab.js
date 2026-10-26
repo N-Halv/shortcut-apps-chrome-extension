@@ -215,9 +215,14 @@ function toggleBarMenu(appId, left) {
 function collapseBar() {
   closeBarMenu();
   if (panelFromBar) setEditing(false);
-  bar.classList.add("collapsed");
+  setCollapsed(true);
   clearTimeout(collapseTimer);
-  collapseTimer = setTimeout(() => bar.classList.remove("collapsed"), 3000);
+  collapseTimer = setTimeout(() => setCollapsed(false), 3000);
+}
+
+function setCollapsed(on) {
+  bar.classList.toggle("collapsed", on);
+  document.body.classList.toggle("bar-collapsed", on);
 }
 
 // Mirrors the in-page bar: shown when "Show shortcut bar" is on. Unlike pages,

@@ -246,13 +246,19 @@ main {
   transform: translateY(-100%);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .bar { transition: none; }
-}
-
 body.has-bar {
   box-sizing: border-box;
   padding-top: 36px;
+  transition: padding-top 220ms ease;
+}
+
+/* The page takes the bar's room back while it is away. */
+body.has-bar.bar-collapsed {
+  padding-top: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar, body.has-bar { transition: none; }
 }
 
 body.has-bar .panel {

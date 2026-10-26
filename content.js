@@ -18,6 +18,8 @@
 const HOST_ID = "app-dock-in-page-host";
 const BAR_HEIGHT = 36;
 const COLLAPSE_MS = 3000;
+// Matches the bar's own slide in STYLE, so the page and the bar move together.
+const SLIDE_MS = 220;
 const EXTENSION_ORIGIN = new URL(chrome.runtime.getURL("/")).origin;
 
 const STYLE = `
@@ -68,7 +70,7 @@ const STYLE = `
     border: none;
     background: #f8fbf1;
     color-scheme: light dark;
-    transition: transform 220ms ease;
+    transition: transform ${SLIDE_MS}ms ease;
   }
 
   .bar.show {
@@ -224,6 +226,8 @@ function install() {
   let wanted = false;
   let open = false;
   let collapseTimer = null;
+  let slideTimer = null;
+  let collapsed = false;
 
   function attach() {
     // Attach to <html>, not <body>. Turbo-style apps — GitHub among them —
@@ -294,20 +298,37 @@ function install() {
     }
   }
 
-  // The page keeps its room while the bar is away: the point is to uncover
-  // something pinned under it, not to shift the whole page up and back.
+  // The page takes back the bar's 36px while it is away, so whatever the bar
+  // covered, or pushed off the bottom of the screen, can be reached.
+  function setCollapsed(next) {
+    collapsed = next;
+    bar.classList.toggle("collapsed", collapsed);
+    if (!flags.shortcutBar) return;
+    // The transition goes on <html> only for the slide, so it never animates
+    // a change the page makes itself.
+    const root = document.documentElement.style;
+    if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      root.setProperty("transition", `margin-top ${SLIDE_MS}ms ease, height ${SLIDE_MS}ms ease`, "important");
+    }
+    clearTimeout(slideTimer);
+    slideTimer = setTimeout(() => root.removeProperty("transition"), SLIDE_MS + 50);
+    makeRoom();
+  }
+
   function collapseBar() {
     closeMenu();
     if (open && panel.classList.contains("under-bar")) setOpen(false);
-    bar.classList.add("collapsed");
+    setCollapsed(true);
     clearTimeout(collapseTimer);
-    collapseTimer = setTimeout(() => bar.classList.remove("collapsed"), COLLAPSE_MS);
+    collapseTimer = setTimeout(() => setCollapsed(false), COLLAPSE_MS);
   }
 
   // Properties set on <html> and <body> to make room for the bar. The page
   // scrolls inside <body>, not the window, so that a sticky header (top: 0)
   // sticks to the bottom edge of the bar instead of sliding under it.
-  const ROOM_PROPS = ["margin-top", "height", "overflow", "position", "inset"];
+  // Collapsing only changes the offset; the rest stays put, so the page keeps
+  // its scroll position.
+  const ROOM_PROPS = ["margin-top", "height", "overflow", "position", "inset", "transition"];
 
   function clearRoom() {
     for (const el of [document.documentElement, document.body]) {
@@ -318,8 +339,9 @@ function install() {
 
   function makeRoom() {
     const root = document.documentElement.style;
-    root.setProperty("margin-top", `${BAR_HEIGHT}px`, "important");
-    root.setProperty("height", `calc(100% - ${BAR_HEIGHT}px)`, "important");
+    const offset = collapsed ? 0 : BAR_HEIGHT;
+    root.setProperty("margin-top", `${offset}px`, "important");
+    root.setProperty("height", `calc(100% - ${offset}px)`, "important");
     root.setProperty("overflow", "hidden", "important");
     root.setProperty("position", "relative", "important");
     const body = document.body;
