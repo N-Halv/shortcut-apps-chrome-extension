@@ -211,13 +211,13 @@ function toggleBarMenu(appId, left) {
   barMenu.hidden = false;
 }
 
-// Same as the in-page bar: up and out of view for three seconds, then back.
+// Same as the in-page bar: up and out of view for five seconds, then back.
 function collapseBar() {
   closeBarMenu();
   if (panelFromBar) setEditing(false);
   setCollapsed(true);
   clearTimeout(collapseTimer);
-  collapseTimer = setTimeout(() => setCollapsed(false), 3000);
+  collapseTimer = setTimeout(() => setCollapsed(false), 5000);
 }
 
 function setCollapsed(on) {
